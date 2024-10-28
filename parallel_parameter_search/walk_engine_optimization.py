@@ -144,7 +144,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
             trial.set_user_attr(name, value)
 
         add('engine.double_support_ratio', 0.0, 0.5)
-        add('engine.freq', 1, 3)
+        add('engine.freq', 1, 2)
 
         add('engine.foot_distance', foot_distance[0], foot_distance[1])
         add('engine.trunk_height', trunk_height[0], trunk_height[1])
@@ -156,7 +156,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         add('engine.trunk_x_offset', -trunk_x, trunk_x)
         add('engine.trunk_y_offset', -trunk_x, trunk_x)
 
-        add('engine.trunk_pitch_p_coef_forward', -2, 2)
+        add('engine.trunk_pitch_p_coef_forward', -1, 1)
         add('engine.trunk_pitch_p_coef_turn', -0.5, 0.5)
 
         add('engine.trunk_pitch', -0.5, 0.5)
@@ -164,7 +164,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         add('engine.foot_rise', foot_rise[0], foot_rise[1])
         # fix('foot_rise', foot_rise)
 
-        add('engine.foot_pitch_angle', 5.0, 15.0)
+        add('engine.foot_pitch_angle', 3.0, 15.0)
 
         # add('engine.first_step_swing_factor', 0.0, 2)
         fix('engine.first_step_swing_factor', 1.80591386587488)
@@ -221,7 +221,7 @@ class WolfgangWalkEngine(AbstractWalkEngine):
         self.reset_height_offset = 0.012
 
     def suggest_walk_params(self, trial):
-        self._suggest_walk_params(trial, trunk_height=(0.37, 0.41), foot_distance=(0.15, 0.25), foot_rise=(0.05, 0.15),
+        self._suggest_walk_params(trial, trunk_height=(0.37, 0.41), foot_distance=(0.15, 0.25), foot_rise=(0.05, 0.10),
                                   trunk_x=0.02, z_movement=0.05)
 
     def get_arm_pose(self):
