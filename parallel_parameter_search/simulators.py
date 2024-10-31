@@ -198,6 +198,15 @@ class WebotsSim(AbstractSim, ABC):
             if not gui:
                 arguments.append("--minimize")
                 arguments.append("--no-rendering")
+
+            # https://cyberbotics.com/doc/guide/running-extern-robot-controllers?version=R2022b&tab-os=linux#multiple-concurrent-simulations-and-multiple-local-extern-robot-controllers
+            controller_port = os.environ["WEBOTS_CONTROLLER_URL"]
+            if controller_port:
+                controller_port = controller_port.split('/')[-1]
+                if len(controller_port) <= 5 and controller_port.isdigit():
+                    print("detecting port", controller_port, "form env WEBOTS_CONTROLLER_URL")
+                    arguments.append(f"--port={controller_port}")
+
             self.sim_proc = subprocess.Popen(arguments, stdout=subprocess.PIPE)
             os.environ["WEBOTS_PID"] = str(self.sim_proc.pid)
 
