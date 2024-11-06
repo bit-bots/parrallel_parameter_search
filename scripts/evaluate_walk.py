@@ -40,10 +40,12 @@ class EvaluateWalk(AbstractWalkOptimization):
     
     def get_arm_pose(self):
         joint_command_msg = JointCommand()
-        joint_command_msg.joint_names = ["left_arm_motor_0",
-                                         "right_arm_motor_0", "left_arm_motor_1", "right_arm_motor_1"]
-        joint_command_msg.positions = [math.radians(0),
-                                       math.radians(0), math.radians(170), math.radians(170)]
+        # TODO: This should automatically use the values set in the corresponding method
+        # of a Class in walk_engine_optimisation.py.
+        # Can't really do that right now, because the constructor probably initialises a sim.
+        joint_command_msg.joint_names = ["LElbow", "RElbow", "LShoulderPitch", "RShoulderPitch"]
+        joint_command_msg.positions = [math.radians(35.86), math.radians(-36.10), math.radians(75.27),
+                                       math.radians(-75.58)]
         return joint_command_msg
 
 
@@ -138,7 +140,7 @@ class EvaluateWalk(AbstractWalkOptimization):
         results_df.to_pickle(f"./walk_evaluation_{self.robot}.pkl")
 
 
-walk_evaluation = EvaluateWalk("worker", True, "bez")
+walk_evaluation = EvaluateWalk("worker", True, "wolfgang")
 walk_evaluation.evaluate_walk()
 
 walk_evaluation.sim.close()
