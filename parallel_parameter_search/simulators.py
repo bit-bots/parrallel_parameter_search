@@ -199,8 +199,9 @@ class WebotsSim(AbstractSim, ABC):
                 arguments.append("--minimize")
                 arguments.append("--no-rendering")
 
+            # use non-standard port, if the WEBOTS_CONTROLLER_URL is set. Only works with the format 'ipc://<port>'
             # https://cyberbotics.com/doc/guide/running-extern-robot-controllers?version=R2022b&tab-os=linux#multiple-concurrent-simulations-and-multiple-local-extern-robot-controllers
-            controller_port = os.environ["WEBOTS_CONTROLLER_URL"]
+            controller_port = os.environ["WEBOTS_CONTROLLER_URL"] if "WEBOTS_CONTROLLER_URL" in os.environ else False
             if controller_port:
                 controller_port = controller_port.split('/')[-1]
                 if len(controller_port) <= 5 and controller_port.isdigit():
