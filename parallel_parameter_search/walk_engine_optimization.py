@@ -224,7 +224,7 @@ class WolfgangWalkEngine(AbstractWalkEngine):
 
     def suggest_walk_params(self, trial):
         self._suggest_walk_params(trial, trunk_height=(0.37, 0.41), foot_distance=(0.15, 0.25), foot_rise=(0.05, 0.10),
-                                  trunk_x=0.02, z_movement=0.05)
+                                  trunk_x=0.02, z_movement=0.02)
 
     def get_arm_pose(self):
         joint_command_msg = JointCommand()
