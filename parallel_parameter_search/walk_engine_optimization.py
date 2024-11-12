@@ -144,7 +144,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
             trial.set_user_attr(name, value)
 
         add('engine.double_support_ratio', 0.0, 0.5)
-        add('engine.freq', 1, 2)
+        add('engine.freq', 0.5, 1.5)
 
         add('engine.foot_distance', foot_distance[0], foot_distance[1])
         add('engine.trunk_height', trunk_height[0], trunk_height[1])
@@ -156,8 +156,9 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         add('engine.trunk_x_offset', -trunk_x, trunk_x)
         add('engine.trunk_y_offset', -trunk_x, trunk_x)
 
-        add('engine.trunk_pitch_p_coef_forward', -1, 1)
-        add('engine.trunk_pitch_p_coef_turn', -0.5, 0.5)
+        # add('engine.trunk_pitch_p_coef_forward', -1, 1)
+        fix('engine.trunk_pitch_p_coef_forward', 0.0)
+        fix('engine.trunk_pitch_p_coef_turn', 0.0)
 
         add('engine.trunk_pitch', -0.5, 0.5)
         # fix('trunk_pitch', 0.0)
@@ -165,6 +166,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         # fix('foot_rise', foot_rise)
 
         add('engine.foot_pitch_angle', 3.0, 15.0)
+        add('engine.foot_pitch_acc', 0.5, 15.0)
 
         # add('engine.first_step_swing_factor', 0.0, 2)
         fix('engine.first_step_swing_factor', 1.80591386587488)
