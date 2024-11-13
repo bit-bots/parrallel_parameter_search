@@ -156,8 +156,8 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         add('engine.trunk_x_offset', -trunk_x, trunk_x)
         add('engine.trunk_y_offset', -trunk_x, trunk_x)
 
-        # add('engine.trunk_pitch_p_coef_forward', -1, 1)
-        fix('engine.trunk_pitch_p_coef_forward', 0.0)
+        add('engine.trunk_pitch_p_coef_forward', -1, 1)
+        # fix('engine.trunk_pitch_p_coef_forward', 0.0)
         fix('engine.trunk_pitch_p_coef_turn', 0.0)
 
         add('engine.trunk_pitch', -0.5, 0.5)
