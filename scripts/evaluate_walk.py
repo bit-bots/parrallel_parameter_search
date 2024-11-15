@@ -58,7 +58,6 @@ class EvaluateWalk(AbstractWalkOptimization):
         results = []
 
         def test_speed(start_speed, increase, direction):
-            self.reset()
             speed = start_speed
             while True:
                 falls = 0
@@ -66,7 +65,8 @@ class EvaluateWalk(AbstractWalkOptimization):
                 speed[1] += increase[1]
                 speed[2] += increase[2]
                 for i in range(self.repetitions):
-                    self.reset_position()
+                    # fully reset pose & position, otherwise the run starts improperly
+                    self.reset()
                     fall, pose_obj, orientation_obj, gyro_obj, end_poses = \
                         self.evaluate_direction(*speed, self.time_limit)
                     goal_end_pose = end_poses[0]
