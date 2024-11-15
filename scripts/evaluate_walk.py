@@ -10,7 +10,7 @@ import numpy as np
 class EvaluateWalk(AbstractWalkOptimization):
 
     def __init__(self, namespace, gui, robot, sim_type="webots", foot_link_names=()):
-        super().__init__(robot, config_name=f"deep_quintic_webots_{robot}")
+        super().__init__(robot, config_name=f"walking_{robot}_simulator")
         if sim_type == 'pybullet':
             urdf_path = self.rospack.get_path(robot + '_description') + '/urdf/robot.urdf'
             self.sim = PybulletSim(self.namespace, gui, urdf_path=urdf_path,
@@ -36,7 +36,7 @@ class EvaluateWalk(AbstractWalkOptimization):
                 self.trunk_pitch_p_coef_forward is None:
             print("Parameters not set correctly")
             exit()
-        self.reset_height_offset = 0.15
+        self.reset_height_offset = 0.12
     
     def get_arm_pose(self):
         joint_command_msg = JointCommand()
@@ -56,7 +56,6 @@ class EvaluateWalk(AbstractWalkOptimization):
                                  ("yaw_speed_multiplier", float)])
         maximal_speeds = []
         results = []
-        self.reset()
 
         def test_speed(start_speed, increase, direction):
             self.reset()
