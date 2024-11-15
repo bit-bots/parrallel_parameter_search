@@ -19,8 +19,7 @@ from ros2param.api import load_parameter_file
 try:
     from wolfgang_webots_sim.webots_robot_supervisor_controller import RobotSupervisorController
 except:
-    print("Could not load webots sim. If you want to use it, source the setenvs.sh")
-
+    print("Could not load webots sim. If you want to use it, try 'sa' and adding '/usr/local/webots/lib/controller/python310' to PYTHONPATH")
 
 class AbstractSim:
 
