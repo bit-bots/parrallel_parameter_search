@@ -36,7 +36,7 @@ class EvaluateWalk(AbstractWalkOptimization):
                 self.trunk_pitch_p_coef_forward is None:
             print("Parameters not set correctly")
             exit()
-        self.reset_height_offset = 0.12
+        self.reset_height_offset = 0.012
     
     def get_arm_pose(self):
         joint_command_msg = JointCommand()
@@ -59,14 +59,17 @@ class EvaluateWalk(AbstractWalkOptimization):
 
         def test_speed(start_speed, increase, direction):
             speed = start_speed
+            self.reset()
+
+            fallen, pose_obj, orientation_obj, gyro_obj, end_poses = self.evaluate_direction(0, 0, 0, 1, standing=True)
             while True:
                 falls = 0
                 speed[0] += increase[0]
                 speed[1] += increase[1]
                 speed[2] += increase[2]
                 for i in range(self.repetitions):
-                    # fully reset pose & position, otherwise the run starts improperly
-                    self.reset()
+                    self.reset_position()
+
                     fall, pose_obj, orientation_obj, gyro_obj, end_poses = \
                         self.evaluate_direction(*speed, self.time_limit)
                     goal_end_pose = end_poses[0]
