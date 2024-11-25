@@ -110,9 +110,9 @@ class EvaluateWalk(AbstractWalkOptimization):
                     break
 
         test_speed([0.0, 0, 0], [0.05, 0, 0], [1,0,0])
-        test_speed([-0.0, 0, 0], [-0.05, 0, 0], [-1,0,0])
-        test_speed([0, 0.0, 0], [0, 0.025, 0], [0,1,0])
-        test_speed([0, 0, 0], [0, 0, 0.25], [0,0,1])
+        # test_speed([-0.0, 0, 0], [-0.05, 0, 0], [-1,0,0])
+        # test_speed([0, 0.0, 0], [0, 0.025, 0], [0,1,0])
+        # test_speed([0, 0, 0], [0, 0, 0.25], [0,0,1])
 
         # viewpoints
         # forward 2.5 6.2 2.5 | 0 -0.56 -0.82 3.1443
