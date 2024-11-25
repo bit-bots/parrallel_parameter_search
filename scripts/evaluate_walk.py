@@ -76,6 +76,9 @@ class EvaluateWalk(AbstractWalkOptimization):
                     goal_end_pose = end_poses[0]
                     actual_end_pose = end_poses[1]
 
+                    print("cumulative joint states:")
+                    print(cumulative_joint_states)
+
                     distance_travelled_in_correct_direction = np.dot(direction, np.array(actual_end_pose))
                     # need to use factor as we have acceleration and deccaleration phases
                     actual_speed = distance_travelled_in_correct_direction / 7.5
