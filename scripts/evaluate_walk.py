@@ -100,6 +100,9 @@ class EvaluateWalk(AbstractWalkOptimization):
                     #results.append(Result(*speed, fall, pose_obj, *real_speed_multipliers))
                     falls += fall
 
+                    if fall:
+                        self.reset()
+
                 if falls == self.repetitions:
                     print(f"Fall at {speed}")
                     print("")
