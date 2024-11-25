@@ -55,7 +55,7 @@ class AbstractWalkStabilization(AbstractWalkOptimization):
             for direction in self.directions:
                 d += 1
                 self.reset_position()
-                early_term, cost_try, end_poses = self.evaluate_direction(*direction, trial, 1, self.time_limit)
+                early_term, cost_try, end_poses, _ = self.evaluate_direction(*direction, trial, 1, self.time_limit)
                 cost += cost_try
                 # check if we failed in this direction and terminate this trial early
                 if early_term:

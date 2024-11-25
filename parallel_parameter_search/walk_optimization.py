@@ -98,6 +98,14 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         self.last_yaw = 0
         self.summed_yaw = 0
 
+        # set up dict for cumulative joint states
+        cumulative_joint_states = {}
+        begin_states = self.sim.get_joint_state_msg()
+        cumulative_joint_states['begin_header'] = begin_states.header
+        cumulative_joint_states['name'] = begin_states.name
+        cumulative_joint_states['velocity'] = [0.0]*len(begin_states.name)
+        cumulative_joint_states['effort'] = [0.0]*len(begin_states.name)
+
         # wait till time for test is up or stopping condition has been reached
         while rclpy.ok():
             # track time
@@ -120,15 +128,25 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             # get angular_vel diff scaled to 0-1. dont take yaw, since we might actually turn around it
             angular_vel_diff += min(1, (abs(imu_msg.angular_velocity.x) + abs(imu_msg.angular_velocity.y)) / 60)
 
+            # track joint states
+            joint_state = self.sim.get_joint_state_msg()
+            cumulative_joint_states['end_header'] = joint_state.header
+            for i in range(len(cumulative_joint_states['name'])):
+                cumulative_joint_states['velocity'][i] += abs(joint_state.velocity[i])
+                cumulative_joint_states['effort'][i] += abs(joint_state.effort[i])
+            sec = joint_state.header.stamp.sec - cumulative_joint_states['begin_header'].stamp.sec
+            nanosec = joint_state.header.stamp.nanosec - cumulative_joint_states['begin_header'].stamp.nanosec
+            cumulative_joint_states['nanos_passed'] = sec * 1e9 + nanosec
+            cumulative_joint_states['secs_passed'] = cumulative_joint_states['nanos_passed'] * 1e-9
             if passed_time > time_limit + 2:
                 # robot should have stopped now, evaluate the fitness
                 pose_cost, poses = self.compute_cost(x, y, yaw, current_pose)
-                return False, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses
+                return False, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses, cumulative_joint_states
 
             # test if the robot has fallen down
             if self.has_robot_fallen():
                 pose_cost, poses = self.compute_cost(x, y, yaw, current_pose)
-                return True, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses
+                return True, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses, cumulative_joint_states
 
             # set commands to simulation and step
             current_time = self.sim.get_time()

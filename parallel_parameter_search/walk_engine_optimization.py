@@ -49,7 +49,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         max_speeds = [0] * len(self.directions)
         max_wrong_speeds = [0] * len(self.directions)
         # standing as first test, is not in loop as it will only be done once
-        fallen, pose_obj, orientation_obj, gyro_obj, end_poses = self.evaluate_direction(0, 0, 0, 1, standing=True)
+        fallen, pose_obj, orientation_obj, gyro_obj, end_poses, _ = self.evaluate_direction(0, 0, 0, 1, standing=True)
         if fallen:
             print("not standing")
             trial.set_user_attr('termination_reason', "not standing")
@@ -75,7 +75,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
                     # do multiple repetitions of the same values since behavior is not always exactly deterministic
                     for i in range(self.repetitions):
                         self.reset_position()
-                        fall, pose_obj, orientation_obj, gyro_obj, (goal_pose, end_pose) = \
+                        fall, pose_obj, orientation_obj, gyro_obj, (goal_pose, end_pose), _ = \
                             self.evaluate_direction(*cmd_vel, self.time_limit)
                         if fall:
                             fallen = True

@@ -61,7 +61,8 @@ class EvaluateWalk(AbstractWalkOptimization):
             speed = start_speed
             self.reset()
 
-            fallen, pose_obj, orientation_obj, gyro_obj, end_poses = self.evaluate_direction(0, 0, 0, 1, standing=True)
+            # TODO: evaluate standing performance as well?
+            fallen, pose_obj, orientation_obj, gyro_obj, end_poses, _ = self.evaluate_direction(0, 0, 0, 1, standing=True)
             while True:
                 falls = 0
                 speed[0] += increase[0]
@@ -70,7 +71,7 @@ class EvaluateWalk(AbstractWalkOptimization):
                 for i in range(self.repetitions):
                     self.reset_position()
 
-                    fall, pose_obj, orientation_obj, gyro_obj, end_poses = \
+                    fall, pose_obj, orientation_obj, gyro_obj, end_poses, cumulative_joint_states = \
                         self.evaluate_direction(*speed, self.time_limit)
                     goal_end_pose = end_poses[0]
                     actual_end_pose = end_poses[1]
@@ -145,7 +146,7 @@ class EvaluateWalk(AbstractWalkOptimization):
         results_df.to_pickle(f"./walk_evaluation_{self.robot}.pkl")
 
 
-walk_evaluation = EvaluateWalk("worker", True, "wolfgang")
+walk_evaluation = EvaluateWalk("worker", False, "wolfgang")
 walk_evaluation.evaluate_walk()
 
 walk_evaluation.sim.close()
