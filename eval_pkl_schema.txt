@@ -2,6 +2,7 @@
 j: number of speed evaluations
 n: number of 8 milisecond timesteps that were recorded
 k: number of joints
+time and command time are slightly different, command time has possibly higher resolution or more rounding errors. time has nanosecond resolution..
 """
 
 
@@ -14,7 +15,9 @@ evaluation_recording = {
         'effort_series'     : [n*[k* joint_efforts]]
         'time_nano_series'  : [n* sim_nanos]
         'time_sec_series'   : [n* sim_secs]
-        'command_sec_serie' : [n* command_time_secs (since start of speed trial)]
+        'start_time'        : command_time_of_start_of_speed_trial
+        'sim_time_series'   : [n* sim.get_time() interface, also used by command time]
+        'command_sec_series': [n* command_time_secs (since start of speed trial)]
         'command_x_series'  : [n* command_x_velocities]
         'command_x_speed'   : command_speed (x direction)
     ]

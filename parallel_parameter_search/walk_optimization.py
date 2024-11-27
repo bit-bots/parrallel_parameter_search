@@ -106,6 +106,8 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             'effort_series': [],
             'time_sec_series': [],
             'time_nano_series': [],
+            'sim_time_series': [],
+            'command_start_time': start_time,
             'command_sec_series': [],
             'command_x_series': [],
         }
@@ -170,6 +172,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             nanos = joint_state.header.stamp.sec * 1e9 + joint_state.header.stamp.nanosec
             joint_recording['time_nano_series'].append(nanos)
             joint_recording['time_sec_series'].append(nanos * 1e-9)
+            joint_recording['sim_time_series'].append(self.sim.get_time())
             joint_recording['command_sec_series'].append(passed_time)
             joint_recording['command_x_series'].append(self.current_speed.linear.x)
 
