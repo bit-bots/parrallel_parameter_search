@@ -6,11 +6,18 @@ import pandas as pd
 from bitbots_msgs.msg import JointCommand
 import math
 import numpy as np
+import argparse
+import pickle
 
 class EvaluateWalk(AbstractWalkOptimization):
 
     def __init__(self, namespace, gui, robot, sim_type="webots", foot_link_names=()):
         super().__init__(robot, config_name=f"walking_{robot}_simulator")
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--file', help="name of the pickle file where the recordings will be dumped",
+                            default=None, type=str, required=True)
+        self.args = parser.parse_args()
+
         if sim_type == 'pybullet':
             urdf_path = self.rospack.get_path(robot + '_description') + '/urdf/robot.urdf'
             self.sim = PybulletSim(self.namespace, gui, urdf_path=urdf_path,
@@ -61,6 +68,12 @@ class EvaluateWalk(AbstractWalkOptimization):
             speed = start_speed
             self.reset()
 
+            evaluation_recording = {
+                'name': self.args.file,
+                'joint_recordings': [],
+                'speeds': [],
+            }
+
             # TODO: evaluate standing performance as well?
             fallen, pose_obj, orientation_obj, gyro_obj, end_poses, _ = self.evaluate_direction(0, 0, 0, 1, standing=True)
             while True:
@@ -69,15 +82,15 @@ class EvaluateWalk(AbstractWalkOptimization):
                 speed[1] += increase[1]
                 speed[2] += increase[2]
                 for i in range(self.repetitions):
+                    assert(self.repetitions == 1) # for easier joint recording
                     self.reset_position()
 
-                    fall, pose_obj, orientation_obj, gyro_obj, end_poses, cumulative_joint_states = \
+                    fall, pose_obj, orientation_obj, gyro_obj, end_poses, joint_recording = \
                         self.evaluate_direction(*speed, self.time_limit)
+
+
                     goal_end_pose = end_poses[0]
                     actual_end_pose = end_poses[1]
-
-                    print("cumulative joint states:")
-                    print(cumulative_joint_states)
 
                     distance_travelled_in_correct_direction = np.dot(direction, np.array(actual_end_pose))
                     # need to use factor as we have acceleration and deccaleration phases
@@ -87,6 +100,16 @@ class EvaluateWalk(AbstractWalkOptimization):
                         if speed[i] != 0:                       
                             print(f"reached speed factor: {actual_speed/speed[i]}")
                             print(f"factor for config: {speed[i]/actual_speed}")
+
+                    joint_recording['command_x_speed'] = speed[0]
+                    evaluation_recording['speeds'].append({
+                        'command_x_speed': speed[0],
+                        'actual_speed': actual_speed,
+                        'speed_factor': actual_speed/speed[0],
+                    })
+
+                    joint_recording['command_x_speed'] = speed[0]
+                    evaluation_recording['joint_recordings'].append(joint_recording)
 
                     real_speed_multipliers = []
                     #if goal_end_pose[0] == 0:
@@ -112,6 +135,9 @@ class EvaluateWalk(AbstractWalkOptimization):
                     print("")
                     maximal_speeds.append(speed)
                     break
+
+                with open(f"./{self.args.file}_{str(speed[0]).replace('.', '_')}.pkl", 'wb') as f:
+                    pickle.dump(evaluation_recording, f)
 
         test_speed([0.0, 0, 0], [0.05, 0, 0], [1,0,0])
         # test_speed([-0.0, 0, 0], [-0.05, 0, 0], [-1,0,0])
@@ -144,9 +170,9 @@ class EvaluateWalk(AbstractWalkOptimization):
             pass
 
         print(maximal_speeds)
-        results_df = pd.DataFrame(results)
-        print(results_df)
-        results_df.to_pickle(f"./walk_evaluation_{self.robot}.pkl")
+        # results_df = pd.DataFrame(results)
+        # print(results_df)
+        # results_df.to_pickle(f"./walk_evaluation_{self.robot}.pkl")
 
 
 walk_evaluation = EvaluateWalk("worker", False, "wolfgang")

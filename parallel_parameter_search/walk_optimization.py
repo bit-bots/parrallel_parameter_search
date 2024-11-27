@@ -98,13 +98,17 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         self.last_yaw = 0
         self.summed_yaw = 0
 
-        # set up dict for cumulative joint states
-        cumulative_joint_states = {}
-        begin_states = self.sim.get_joint_state_msg()
-        cumulative_joint_states['begin_header'] = begin_states.header
-        cumulative_joint_states['name'] = begin_states.name
-        cumulative_joint_states['velocity'] = [0.0]*len(begin_states.name)
-        cumulative_joint_states['effort'] = [0.0]*len(begin_states.name)
+        # set up dict for to record joint states of each time step
+        joint_recording = {
+            'name': self.sim.get_joint_state_msg().name,
+            'position_series': [],
+            'velocity_series': [],
+            'effort_series': [],
+            'time_sec_series': [],
+            'time_nano_series': [],
+            'command_sec_series': [],
+            'command_x_series': [],
+        }
 
         # wait till time for test is up or stopping condition has been reached
         while rclpy.ok():
@@ -128,27 +132,15 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             # get angular_vel diff scaled to 0-1. dont take yaw, since we might actually turn around it
             angular_vel_diff += min(1, (abs(imu_msg.angular_velocity.x) + abs(imu_msg.angular_velocity.y)) / 60)
 
-            # track joint states
-            joint_state = self.sim.get_joint_state_msg()
-            cumulative_joint_states['end_header'] = joint_state.header
-            for i in range(len(cumulative_joint_states['name'])):
-                cumulative_joint_states['velocity'][i] += abs(joint_state.velocity[i])
-                cumulative_joint_states['effort'][i] += abs(joint_state.effort[i])
-
-            sec = joint_state.header.stamp.sec - cumulative_joint_states['begin_header'].stamp.sec
-            nanosec = joint_state.header.stamp.nanosec - cumulative_joint_states['begin_header'].stamp.nanosec
-            cumulative_joint_states['nanos_passed'] = sec * 1e9 + nanosec
-            cumulative_joint_states['secs_passed'] = cumulative_joint_states['nanos_passed'] * 1e-9
-            
             if passed_time > time_limit + 2:
                 # robot should have stopped now, evaluate the fitness
                 pose_cost, poses = self.compute_cost(x, y, yaw, current_pose)
-                return False, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses, cumulative_joint_states
+                return False, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses, joint_recording
 
             # test if the robot has fallen down
             if self.has_robot_fallen():
                 pose_cost, poses = self.compute_cost(x, y, yaw, current_pose)
-                return True, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses, cumulative_joint_states
+                return True, pose_cost, orientation_diff / passed_timesteps, angular_vel_diff / passed_timesteps, poses, joint_recording
 
             # set commands to simulation and step
             current_time = self.sim.get_time()
@@ -167,6 +159,19 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             for i in range(5):
                 rclpy.spin_once(self.node, timeout_sec=0)
             self.walk.spin_ros()
+
+             # record joint state. This is done after stepping the sim with the current commands,
+             # to get a clean correlation of commands and effects on the same time-step.
+            joint_state = self.sim.get_joint_state_msg()
+            joint_recording['position_series'].append(joint_state.position)
+            joint_recording['velocity_series'].append(joint_state.velocity)
+            joint_recording['effort_series'].append(joint_state.effort)
+
+            nanos = joint_state.header.stamp.sec * 1e9 + joint_state.header.stamp.nanosec
+            joint_recording['time_nano_series'].append(nanos)
+            joint_recording['time_sec_series'].append(nanos * 1e-9)
+            joint_recording['command_sec_series'].append(passed_time)
+            joint_recording['command_x_series'].append(self.current_speed.linear.x)
 
         # was stopped before finishing
         raise optuna.exceptions.OptunaError()
