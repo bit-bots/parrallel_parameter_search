@@ -1,0 +1,26 @@
+"""
+j: number of speed evaluations
+n: number of 8 milisecond timesteps that were recorded
+k: number of joints
+"""
+
+
+evaluation_recording = {
+    'name': "<--name_arg>"
+    'joint_recordings': [ j*
+        'name'              : [k* joint_names]
+        'position_series'   : [n*[k* joint_positions]]
+        'velocity_series'   : [n*[k* joint_velocities]]
+        'effort_series'     : [n*[k* joint_efforts]]
+        'time_nano_series'  : [n* sim_nanos]
+        'time_sec_series'   : [n* sim_secs]
+        'command_sec_serie' : [n* command_time_secs (since start of speed trial)]
+        'command_x_series'  : [n* command_x_velocities]
+        'command_x_speed'   : command_speed (x direction)
+    ]
+    'speeds':[ j*
+        'command_x_speed'   : same as in joint recordings
+        'actual_speed':     : distance change in command direction over 7.5 seconds
+        'speed_factor'      : actual_speed/command_speed
+    ]
+}
