@@ -134,10 +134,12 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             for i in range(len(cumulative_joint_states['name'])):
                 cumulative_joint_states['velocity'][i] += abs(joint_state.velocity[i])
                 cumulative_joint_states['effort'][i] += abs(joint_state.effort[i])
+
             sec = joint_state.header.stamp.sec - cumulative_joint_states['begin_header'].stamp.sec
             nanosec = joint_state.header.stamp.nanosec - cumulative_joint_states['begin_header'].stamp.nanosec
             cumulative_joint_states['nanos_passed'] = sec * 1e9 + nanosec
             cumulative_joint_states['secs_passed'] = cumulative_joint_states['nanos_passed'] * 1e-9
+            
             if passed_time > time_limit + 2:
                 # robot should have stopped now, evaluate the fitness
                 pose_cost, poses = self.compute_cost(x, y, yaw, current_pose)
