@@ -13,8 +13,12 @@ from rcl_interfaces.msg import Parameter, ParameterValue
 
 from parallel_parameter_search.abstract_ros_optimization import AbstractRosOptimization
 from parallel_parameter_search.simulators import WebotsSim
+from sensor_msgs.msg import Imu
+from geometry_msgs.msg import Vector3
+from bitbots_msgs.msg import FootPressure
 
 from bitbots_utils.utils import load_moveit_parameter, get_parameters_from_ros_yaml
+from humanoid_simulator_interface.utils.dict_from_joint_command import dict_from_joint_command, joint_state_from_dict
 
 
 class AbstractWalkOptimization(AbstractRosOptimization):
@@ -36,15 +40,20 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         moveit_parameters = load_moveit_parameter(self.robot_name)
 
         # load walk params
-        self.walk_parameters = get_parameters_from_ros_yaml("walking",
-                                                       f"{get_package_share_directory('bitbots_quintic_walk')}"
-                                                       f"/config/{config_name}.yaml",
-                                                       use_wildcard=True)
+        self.walk_parameters = get_parameters_from_ros_yaml(
+            "walking", f"{get_package_share_directory('bitbots_quintic_walk')}"
+            f"/config/walking_wolfgang_simulator.yaml",
+            use_wildcard=True)
+
         # activate IK reset only for wolfgang
-        self.walk_parameters.append(Parameter(name="node.ik_reset", value=ParameterValue(bool_value=self.robot_name == "wolfgang")))
+        self.walk_parameters.append(
+            Parameter(name="node.ik_reset",
+                      value=ParameterValue(
+                          bool_value=self.robot_name == "wolfgang")))
 
         # create walk as python class to call it later
-        self.walk = PyWalk(self.namespace, self.walk_parameters + moveit_parameters)
+        self.walk = PyWalk(self.namespace, self.walk_parameters,
+                           moveit_parameters)
 
     def suggest_walk_params(self, trial):
         raise NotImplementedError
@@ -54,7 +63,8 @@ class AbstractWalkOptimization(AbstractRosOptimization):
 
     def has_robot_fallen(self):
         pos, rpy = self.sim.get_robot_pose_rpy()
-        return abs(rpy[0]) > math.radians(45) or abs(rpy[1]) > math.radians(45) or pos[2] < self.trunk_height / 2
+        return abs(rpy[0]) > math.radians(45) or abs(
+            rpy[1]) > math.radians(45) or pos[2] < self.trunk_height / 2
 
     def modulate_speed(self, x, y, yaw, passed_time, time_limit, standing):
         # change speed first increasing and then decreasing
@@ -89,8 +99,10 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         return [pos[0], pos[1], self.summed_yaw]
 
     def evaluate_direction(self, x, y, yaw, time_limit, standing=False):
+        print("starting evaluation")
         if time_limit == 0:
-            raise AssertionError("Time limit must be greater than 0")  # todo when is this happening?
+            raise AssertionError("Time limit must be greater than 0"
+                                 )  # todo when is this happening?
         print(F'cmd: {round(x, 2)} {round(y, 2)} {round(yaw, 2)}')
         start_time = self.sim.get_time()
         orientation_diff = 0.0
@@ -111,14 +123,18 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             self.modulate_speed(x, y, yaw, passed_time, time_limit, standing)
 
             # track pose to count full turns of the robot
-            pos, rpy = self.sim.get_robot_pose_rpy()
+            pos, rpy = self.sim.get_base_position_and_orientation_rpy()
             current_pose = self.track_pose(pos, rpy)
 
             # get orientation diff scaled to 0-1
-            orientation_diff += min(1, (abs(rpy[0]) + abs(rpy[1] - self.correct_pitch(x, y, yaw))) * 0.5)
+            orientation_diff += min(
+                1,
+                (abs(rpy[0]) + abs(rpy[1] - self.correct_pitch(x, y, yaw))) *
+                0.5)
             imu_msg = self.sim.get_imu_msg()
             # get angular_vel diff scaled to 0-1. dont take yaw, since we might actually turn around it
-            angular_vel_diff += min(1, (abs(imu_msg.angular_velocity.x) + abs(imu_msg.angular_velocity.y)) / 60)
+            angular_vel_diff += min(1, (abs(imu_msg.angular_velocity.x) +
+                                        abs(imu_msg.angular_velocity.y)) / 60)
 
             if passed_time > time_limit + 2:
                 # robot should have stopped now, evaluate the fitness
@@ -132,10 +148,16 @@ class AbstractWalkOptimization(AbstractRosOptimization):
 
             # set commands to simulation and step
             current_time = self.sim.get_time()
-            joint_command = self.walk.step(current_time - self.last_time, self.current_speed,
+            dt = current_time - self.last_time
+            print(dt)
+            imu_msg, js_msg, fpl, fpr = self.get_sensors_for_walking()
+            joint_command = self.walk.step(dt,
+                                           self.current_speed,
                                            imu_msg,
-                                           self.sim.get_joint_state_msg(),
-                                           self.sim.get_pressure_left(), self.sim.get_pressure_right())
+                                           js_msg,
+                                           fpl,
+                                           fpr)
+
             self.sim.set_joints(joint_command)
             self.last_time = current_time
             self.sim.step_sim()
@@ -152,16 +174,27 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         raise optuna.exceptions.OptunaError()
 
     def complete_walking_step(self, number_steps=1, fake=False):
+        print("starting walking step")
         start_time = self.sim.get_time()
         for i in range(number_steps):
             # does a double step
             while rclpy.ok():
                 current_time = self.sim.get_time()
-                joint_command = self.walk.step(current_time - self.last_time, self.current_speed,
-                                               self.sim.get_imu_msg(),
-                                               self.sim.get_joint_state_msg(), self.sim.get_pressure_left(),
-                                               self.sim.get_pressure_right())
-                self.sim.set_joints(joint_command)
+                imu_msg, js_msg, fpl, fpr = self.get_sensors_for_walking()
+                dt = current_time - self.last_time
+                print(dt)
+                joint_command = self.walk.step(dt,
+                                               self.current_speed,
+                                               imu_msg,
+                                               js_msg,
+                                               fpl,
+                                               fpr)
+
+                joint_command_dict = dict_from_joint_command(joint_command)
+                #print(joint_command_dict)
+                #print(self.sim.get_joint_positions())
+                #input("...")
+                self.sim.set_actuator_goal_positions(joint_command_dict)
                 self.last_time = current_time
                 if not fake:
                     self.sim.step_sim()
@@ -176,17 +209,37 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                     # if walking does not perform step correctly due to impossible IK problems, do a timeout
                     break
 
+    def get_sensors_for_walking(self):
+        imu_anglular = self.sim.get_imu_ang_vel()
+        imu_linear = self.sim.get_imu_lin_acc()
+        imu_msg = Imu()
+        imu_msg.angular_velocity = Vector3(x=imu_anglular[0],
+                                            y=imu_anglular[1],
+                                            z=imu_anglular[2])
+        imu_msg.linear_acceleration = Vector3(x=imu_linear[0],
+                                                y=imu_linear[1],
+                                                z=imu_linear[2])
+        fpl = FootPressure()
+        fpr = FootPressure()
+        js_msg = joint_state_from_dict(self.sim.get_joint_positions())
+        return imu_msg, js_msg, fpl, fpr
+
     def compute_cost(self, v_x, v_y, v_yaw, current_pose):
+
         def get_matrix(v_x, v_y, v_yaw, t):
             if v_yaw == 0:
                 # prevent division by zero
                 return (np.array([v_x * t, v_y * t]), 0)
             else:
-                return (np.array([(v_x * math.sin(t * v_yaw) - v_y * (1 - math.cos(t * v_yaw))) / v_yaw,
-                                  (v_y * math.sin(t * v_yaw) + v_x * (1 - math.cos(t * v_yaw))) / v_yaw]), v_yaw * t)
+                return (np.array([(v_x * math.sin(t * v_yaw) - v_y *
+                                   (1 - math.cos(t * v_yaw))) / v_yaw,
+                                  (v_y * math.sin(t * v_yaw) + v_x *
+                                   (1 - math.cos(t * v_yaw))) / v_yaw]),
+                        v_yaw * t)
 
         def rotation(yaw):
-            return np.array([[math.cos(yaw), -math.sin(yaw)], [math.sin(yaw), math.cos(yaw)]])
+            return np.array([[math.cos(yaw), -math.sin(yaw)],
+                             [math.sin(yaw), math.cos(yaw)]])
 
         # compute end pose. robot is basically walking on circles where radius=v_x/v_yaw and v_y/v_yaw
         # we need to include the acceleration and deceleration phases
@@ -194,33 +247,43 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         # always need to rotate around current yaw
         after_first_accel = get_matrix(v_x / 4, v_y / 4, v_yaw / 4, 1)
         after_second_accel = get_matrix(v_x / 2, v_y / 2, v_yaw / 2, 1)
-        after_second_accel = (after_first_accel[0] + np.dot(rotation(after_first_accel[1]), after_second_accel[0]),
-                              after_first_accel[1] + after_second_accel[1])
+        after_second_accel = (
+            after_first_accel[0] +
+            np.dot(rotation(after_first_accel[1]), after_second_accel[0]),
+            after_first_accel[1] + after_second_accel[1])
         after_full_speed = get_matrix(v_x, v_y, v_yaw, self.time_limit - 3)
-        after_full_speed = (after_second_accel[0] + np.dot(rotation(after_second_accel[1]), after_full_speed[0]),
-                            after_second_accel[1] + after_full_speed[1])
+        after_full_speed = (
+            after_second_accel[0] +
+            np.dot(rotation(after_second_accel[1]), after_full_speed[0]),
+            after_second_accel[1] + after_full_speed[1])
         after_deceleration = get_matrix(v_x / 2, v_y / 2, v_yaw / 2, 1)
-        after_deceleration = (after_full_speed[0] + np.dot(rotation(after_full_speed[1]), after_deceleration[0]),
-                              after_full_speed[1] + after_deceleration[1])
+        after_deceleration = (
+            after_full_speed[0] +
+            np.dot(rotation(after_full_speed[1]), after_deceleration[0]),
+            after_full_speed[1] + after_deceleration[1])
 
         # back to x,y,yaw format
-        correct_pose = (after_deceleration[0][0], after_deceleration[0][1], after_deceleration[1])
+        correct_pose = (after_deceleration[0][0], after_deceleration[0][1],
+                        after_deceleration[1])
 
         # we need to handle targets cleverly or we will have divisions by 0
         if v_x == 0 and v_y == 0:
             trans_target = 1
         else:
             # Pythagoras
-            trans_target = math.sqrt(correct_pose[0] ** 2 + correct_pose[1] ** 2)
+            trans_target = math.sqrt(correct_pose[0]**2 + correct_pose[1]**2)
         # always take tau as measurement
         rot_target = math.tau
 
         # Pythagoras
-        trans_error_abs = math.sqrt((correct_pose[0] - current_pose[0]) ** 2 + (correct_pose[1] - current_pose[1]) ** 2)
+        trans_error_abs = math.sqrt((correct_pose[0] - current_pose[0])**2 +
+                                    (correct_pose[1] - current_pose[1])**2)
         # yaw is split in continuous sin and cos components
-        rot_error_abs = abs(math.sin(correct_pose[2]) - math.sin(current_pose[2])) + abs(
-            math.cos(correct_pose[2]) - math.cos(current_pose[2]))
-        pose_cost = ((trans_error_abs / trans_target) + (rot_error_abs / rot_target)) / 2
+        rot_error_abs = abs(
+            math.sin(correct_pose[2]) - math.sin(current_pose[2])) + abs(
+                math.cos(correct_pose[2]) - math.cos(current_pose[2]))
+        pose_cost = ((trans_error_abs / trans_target) +
+                     (rot_error_abs / rot_target)) / 2
 
         # scale to [0-1]
         if pose_cost > 1:
@@ -232,13 +295,15 @@ class AbstractWalkOptimization(AbstractRosOptimization):
     def reset_position(self):
         height = self.trunk_height + self.reset_height_offset
         pitch = self.trunk_pitch
-        (x, y, z, w) = tf_transformations.quaternion_from_euler(self.reset_rpy_offset[0],
-                                                                self.reset_rpy_offset[1] + pitch,
-                                                                self.reset_rpy_offset[2])
+        (x, y, z, w) = tf_transformations.quaternion_from_euler(
+            self.reset_rpy_offset[0], self.reset_rpy_offset[1] + pitch,
+            self.reset_rpy_offset[2])
 
         self.sim.reset_robot_pose((0, 0, height), (x, y, z, w))
 
     def reset(self):
+        #self.walk.special_reset("WALKING", 0.0, Twist(), False)
+
         # reset simulation
         # let the robot do a few steps in the air to get correct walkready position
         self.sim.set_gravity(False)
@@ -249,7 +314,8 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         self.sim.reset_robot_pose((0, 0, 1), (0, 0, 0, 1), reset_joints=True)
         # set arms correctly
         joint_command_msg = self.get_arm_pose()
-        self.sim.set_joints(joint_command_msg)
+        joint_command_dict = dict_from_joint_command(joint_command_msg)
+        self.sim.set_joint_positions(joint_command_dict)
         self.set_cmd_vel(0.1, 0, 0)
         self.complete_walking_step()
         self.set_cmd_vel(0, 0, 0, stop=True)
@@ -258,6 +324,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         # some robots have issues in their collision model
         if self.robot_name not in ["nao", "chape"]:
             self.sim.set_self_collision(True)
+        print("finishing reset")
         self.reset_position()
 
     def set_cmd_vel(self, x: float, y: float, yaw: float, stop=False):

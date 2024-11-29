@@ -144,23 +144,30 @@ if args.suggest:
             # old params
             print("#############\nUSING GIVEN PARAMETERS\n#############")
             for i in range(100):
-                study.enqueue_trial({"engine.double_support_ratio": 0.034796570144596736,
-                                     "engine.first_step_swing_factor": 1.7800595066924876,
-                                     "engine.foot_distance": 0.19881438707505314,
-                                     "engine.foot_rise": 0.12280877798916165, "engine.freq": 1.8959162718292013,
-                                     "engine.trunk_height": 0.39804158587045746,
-                                     "engine.trunk_phase": -0.08475246510986148,
-                                     "engine.trunk_pitch": -0.16357469075949516,
-                                     "engine.trunk_pitch_p_coef_forward": 2.5292669379106547,
-                                     "engine.trunk_pitch_p_coef_turn": 1.260229361058871,
-                                     "engine.trunk_swing": 0.37717262866576556,
-                                     "engine.trunk_x_offset": 0.006565605317052644,
-                                     "engine.trunk_y_offset": 0.0016112522476573361,
-                                     "engine.trunk_z_movement": 0.008505190203257816,
-                                     "engine.first_step_trunk_phase": -0.5, "engine.foot_apex_phase": 0.5,
-                                     "engine.foot_overshoot_phase": 1, "engine.foot_overshoot_ratio": 0.0,
-                                     "engine.foot_put_down_phase": 1, "engine.foot_z_pause": 0,
-                                     "engine.trunk_pause": 0})
+                study.enqueue_trial({
+                    "engine.double_support_ratio": 0.0264282002140171,
+                    "engine.first_step_swing_factor": 1.80591386587488,
+                    "engine.foot_distance": 0.179900277671633,
+                    "engine.foot_rise": 0.0819786291304007,
+                    "engine.freq": 1.2,
+                    "engine.trunk_height": 0.394780002666927,
+                    "engine.trunk_phase": -0.151653984431689,
+                    "engine.trunk_pitch": 0.105566178884548,
+                    "engine.trunk_pitch_p_coef_forward": -0.186068274875133,
+                    "engine.trunk_pitch_p_coef_turn": -0.457339940581988,
+                    "engine.trunk_swing": 0.154856652745882,
+                    "engine.trunk_x_offset": 0.00885762700992359,
+                    "engine.trunk_y_offset": 0.00369752824507733,
+                    "engine.trunk_z_movement": 0.0155005052923747,
+                    "engine.first_step_trunk_phase": -0.5,
+                    "engine.foot_apex_phase": 0.5,
+                    "engine.foot_apex_pitch": 0.1,
+                    "engine.foot_overshoot_phase": 1.0,
+                    "engine.foot_overshoot_ratio": 0.0,
+                    "engine.foot_put_down_phase": 1.0,
+                    "engine.foot_z_pause": 0.0,
+                    "engine.trunk_pause": 0.0
+                })
 
     else:
         print("no suggestion specified for this type")

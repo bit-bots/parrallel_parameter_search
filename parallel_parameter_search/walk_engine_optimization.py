@@ -9,17 +9,38 @@ from bitbots_msgs.msg import JointCommand
 from parallel_parameter_search.walk_optimization import AbstractWalkOptimization
 
 from parallel_parameter_search.simulators import PybulletSim, WebotsSim
+from humanoid_simulator_interface.mujoco import MuJoCoSim
+from humanoid_simulator_interface.utils.reset_constants import get_reset_joints, get_reset_pose
 
 
 class AbstractWalkEngine(AbstractWalkOptimization):
-    def __init__(self, gui, robot_name, sim_type='pybullet', foot_link_names=(), start_speeds=None,
-                 repetitions=1, multi_objective=False, only_forward=False, wandb=False):
+
+    def __init__(self,
+                 gui,
+                 robot_name,
+                 sim_type='pybullet',
+                 foot_link_names=(),
+                 start_speeds=None,
+                 repetitions=1,
+                 multi_objective=False,
+                 only_forward=False,
+                 wandb=False):
         super().__init__(robot_name, wandb=wandb)
         if sim_type == 'pybullet':
             urdf_path = get_package_share_directory(f"{robot_name}_description") + "/urdf/robot.urdf"
             self.sim = PybulletSim(self.node, gui, urdf_path=urdf_path, foot_link_names=foot_link_names)
         elif sim_type == 'webots':
             self.sim = WebotsSim(self.node, gui, robot_name, world="optimization_" + robot_name, ros_active=False)
+        elif sim_type == 'mujoco':
+            reset_joints = get_reset_joints(robot_name, 'mujoco')
+            reset_pose = get_reset_pose(robot_name, 'mujoco')
+            self.sim = MuJoCoSim(sim_step=0.002,
+                                 robot_name=robot_name,
+                                 reset_joint_positions=reset_joints,
+                                 reset_base_position=reset_pose[0],
+                                 reset_base_orientation_wxyz=reset_pose[1],
+                                 gui=gui)
+
         else:
             print(f'sim type {sim_type} not known')
 
@@ -37,6 +58,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         self.multi_objective = multi_objective
 
     def objective(self, trial):
+        print("starting trial")
         # log trial number, for wandb. this can be used to plot trial number over time and see if
         # time per trial increases
         if self.wandb:
@@ -44,11 +66,13 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         start_time = time.time()
         # get parameter to evaluate from optuna
         self.suggest_walk_params(trial)
+        print("performing reset")
         self.reset()
 
         max_speeds = [0] * len(self.directions)
         max_wrong_speeds = [0] * len(self.directions)
         # standing as first test, is not in loop as it will only be done once
+        print("evaluating direction")
         fallen, pose_obj, orientation_obj, gyro_obj, end_poses = self.evaluate_direction(0, 0, 0, 1, standing=True)
         if fallen:
             print("not standing")
@@ -189,18 +213,18 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         # walk engine should update at same speed as simulation
         param_dict["node.engine_freq"] = 1 / self.sim.get_timestep()
         # don't use loop closure when optimizing parameter
-        param_dict["node.pressure_phase_reset_active"] = False
-        param_dict["node.effort_phase_reset_active"] = False
+        #param_dict["node.pressure_phase_reset_active"] = False
+        #param_dict["node.effort_phase_reset_active"] = False
         # make sure that steps are not limited
-        param_dict["node.imu_active"] = False
-        param_dict["node.max_step_x"] = 100.0
-        param_dict["node.max_step_y"] = 100.0
-        param_dict["node.max_step_xy"] = 100.0
-        param_dict["node.max_step_z"] = 100.0
-        param_dict["node.max_step_angular"] = 100.0
-        param_dict["node.x_speed_multiplier"] = 1.0
-        param_dict["node.y_speed_multiplier"] = 1.0
-        param_dict["node.yaw_speed_multiplier"] = 1.0
+        #param_dict["node.imu_active"] = False
+        #param_dict["node.max_step_x"] = 100.0
+        #param_dict["node.max_step_y"] = 100.0
+        #param_dict["node.max_step_xy"] = 100.0
+        #param_dict["node.max_step_z"] = 100.0
+        #param_dict["node.max_step_angular"] = 100.0
+        #param_dict["node.x_speed_multiplier"] = 1.0
+        #param_dict["node.y_speed_multiplier"] = 1.0
+        #param_dict["node.yaw_speed_multiplier"] = 1.0
 
         self.current_params = param_dict
         self.walk.set_parameters(param_dict)
@@ -225,8 +249,8 @@ class WolfgangWalkEngine(AbstractWalkEngine):
     def get_arm_pose(self):
         joint_command_msg = JointCommand()
         joint_command_msg.joint_names = ["LElbow", "RElbow", "LShoulderPitch", "RShoulderPitch"]
-        joint_command_msg.positions = [math.radians(35.86), math.radians(-36.10), math.radians(75.27),
-                                       math.radians(-75.58)]
+        joint_command_msg.positions = [math.radians(35.86), math.radians(-36.10), math.radians(20.0),
+                                       math.radians(20.0)]
         return joint_command_msg
 
 
