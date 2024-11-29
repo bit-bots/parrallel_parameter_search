@@ -104,6 +104,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             'position_series': [],
             'velocity_series': [],
             'effort_series': [],
+            'walk_phase': [],
             'time_sec_series': [],
             'time_nano_series': [],
             'sim_time_series': [],
@@ -162,12 +163,15 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                 rclpy.spin_once(self.node, timeout_sec=0)
             self.walk.spin_ros()
 
-             # record joint state. This is done after stepping the sim with the current commands,
-             # to get a clean correlation of commands and effects on the same time-step.
+            # record joint state. This is done after stepping the sim with the current commands,
+            # to get a clean correlation of commands and effects on the same time-step.
+
             joint_state = self.sim.get_joint_state_msg()
             joint_recording['position_series'].append(joint_state.position)
             joint_recording['velocity_series'].append(joint_state.velocity)
             joint_recording['effort_series'].append(joint_state.effort)
+
+            joint_recording['walk_phase'].append(self.walk.get_phase())
 
             nanos = joint_state.header.stamp.sec * 1e9 + joint_state.header.stamp.nanosec
             joint_recording['time_nano_series'].append(nanos)
