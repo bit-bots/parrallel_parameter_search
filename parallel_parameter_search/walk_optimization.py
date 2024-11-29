@@ -62,7 +62,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         return self.trunk_pitch + self.trunk_pitch_p_coef_forward * x + self.trunk_pitch_p_coef_turn * yaw
 
     def has_robot_fallen(self):
-        pos, rpy = self.sim.get_robot_pose_rpy()
+        pos, rpy = self.sim.get_base_position_and_orientation_rpy()
         return abs(rpy[0]) > math.radians(45) or abs(
             rpy[1]) > math.radians(45) or pos[2] < self.trunk_height / 2
 
@@ -131,7 +131,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                 1,
                 (abs(rpy[0]) + abs(rpy[1] - self.correct_pitch(x, y, yaw))) *
                 0.5)
-            imu_msg = self.sim.get_imu_msg()
+            imu_msg, js_msg, fpl, fpr = self.get_sensors_for_walking()
             # get angular_vel diff scaled to 0-1. dont take yaw, since we might actually turn around it
             angular_vel_diff += min(1, (abs(imu_msg.angular_velocity.x) +
                                         abs(imu_msg.angular_velocity.y)) / 60)
@@ -149,8 +149,6 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             # set commands to simulation and step
             current_time = self.sim.get_time()
             dt = current_time - self.last_time
-            print(dt)
-            imu_msg, js_msg, fpl, fpr = self.get_sensors_for_walking()
             joint_command = self.walk.step(dt,
                                            self.current_speed,
                                            imu_msg,
@@ -158,7 +156,8 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                                            fpl,
                                            fpr)
 
-            self.sim.set_joints(joint_command)
+            joint_command_dict = dict_from_joint_command(joint_command)
+            self.sim.set_joint_positions(joint_command_dict)
             self.last_time = current_time
             self.sim.step_sim()
 
@@ -182,7 +181,6 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                 current_time = self.sim.get_time()
                 imu_msg, js_msg, fpl, fpr = self.get_sensors_for_walking()
                 dt = current_time - self.last_time
-                print(dt)
                 joint_command = self.walk.step(dt,
                                                self.current_speed,
                                                imu_msg,
