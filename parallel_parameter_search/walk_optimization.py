@@ -50,7 +50,6 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             Parameter(name="node.ik_reset",
                       value=ParameterValue(
                           bool_value=self.robot_name == "wolfgang")))
-
         # create walk as python class to call it later
         self.walk = PyWalk(self.namespace, self.walk_parameters,
                            moveit_parameters)
@@ -131,6 +130,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                 1,
                 (abs(rpy[0]) + abs(rpy[1] - self.correct_pitch(x, y, yaw))) *
                 0.5)
+
             imu_msg, js_msg, fpl, fpr = self.get_sensors_for_walking()
             # get angular_vel diff scaled to 0-1. dont take yaw, since we might actually turn around it
             angular_vel_diff += min(1, (abs(imu_msg.angular_velocity.x) +
@@ -173,7 +173,6 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         raise optuna.exceptions.OptunaError()
 
     def complete_walking_step(self, number_steps=1, fake=False):
-        print("starting walking step")
         start_time = self.sim.get_time()
         for i in range(number_steps):
             # does a double step
@@ -189,9 +188,6 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                                                fpr)
 
                 joint_command_dict = dict_from_joint_command(joint_command)
-                #print(joint_command_dict)
-                #print(self.sim.get_joint_positions())
-                #input("...")
                 self.sim.set_actuator_goal_positions(joint_command_dict)
                 self.last_time = current_time
                 if not fake:

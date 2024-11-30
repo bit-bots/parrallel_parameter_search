@@ -10,8 +10,8 @@ from ament_index_python import get_package_share_directory
 from rclpy.node import Node
 from geometry_msgs.msg import Point, Quaternion
 from nav_msgs.msg import Odometry
-from wolfgang_pybullet_sim.simulation import Simulation
-from wolfgang_pybullet_sim.ros_interface import ROSInterface
+#from wolfgang_pybullet_sim.simulation import Simulation
+#from wolfgang_pybullet_sim.ros_interface import ROSInterface
 
 from bitbots_msgs.msg import JointCommand, FootPressure
 from ros2param.api import load_parameter_file

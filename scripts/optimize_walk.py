@@ -6,7 +6,7 @@ import time
 
 import optuna
 from optuna.pruners import MedianPruner
-from optuna.samplers import TPESampler, CmaEsSampler, MOTPESampler, RandomSampler, NSGAIISampler
+from optuna.samplers import TPESampler, CmaEsSampler, RandomSampler, NSGAIISampler # TODO MOTPESampler,
 from optuna.integration import WeightsAndBiasesCallback
 import numpy as np
 
@@ -175,10 +175,11 @@ if args.suggest:
 # only use wandb callback if name provided
 if args.wandb:
     wandb_kwargs = {
-        "project": f"optuna-walk-{args.type}",
+        "project": f"mujoco_quintic_walk_optim",
+        "entity": "bitbots",
         "tags": [args.sampler, args.robot, args.sim],
         "resume": "never",
-        "group": args.name,  # use group so that we can run multiple studies in parallel
+        #"group": args.name,  # use group so that we can run multiple studies in parallel
     }
     if args.multivariate:
         wandb_kwargs["tags"].append("multivariate")
