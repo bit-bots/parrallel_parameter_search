@@ -22,6 +22,7 @@ evaluation_recording = {
             'command_x_series'  : [n* command_x_velocities]
             'command_x_speed'   : command_speed (x direction)
 
+            'walk_phase'        : [n* 0 to 1],
             'support_state'     : [n* phase(0 to 2)],
             'imu_linear_acc_x'  : [n* imu linear acceleration],
             'imu_linear_acc_y'  : [n* up/down direction?],
@@ -70,6 +71,8 @@ run = {
     'command_x_speed'       : same as in joint recordings
     'actual_speed':         : distance change in command direction over 7.5 seconds
     'speed_factor'          : actual_speed/command_speed
+
+    'walk_phase'        : [n* 0 to 1],
     'support_state'     : [n* phase(0 to 2)],
     'imu_linear_acc_x'  : [n* imu linear acceleration],
     'imu_linear_acc_y'  : [n* up/down direction?],
