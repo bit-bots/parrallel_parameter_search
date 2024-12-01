@@ -111,6 +111,21 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             'command_start_time': start_time,
             'command_sec_series': [],
             'command_x_series': [],
+
+            'support_state': [],
+            'imu_linear_acc_x': [],
+            'imu_linear_acc_y': [],
+            'imu_linear_acc_z': [],
+            'imu_angular_vel_x': [],
+            'imu_angular_vel_y': [],
+            'imu_angular_vel_z': [],
+
+            'robot_pose_x': [],
+            'robot_pose_y': [],
+            'robot_pose_z': [],
+            'robot_pose_r': [],
+            'robot_pose_p': [],
+            'robot_pose_y': [],
         }
 
         # wait till time for test is up or stopping condition has been reached
@@ -179,6 +194,24 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             joint_recording['sim_time_series'].append(self.sim.get_time())
             joint_recording['command_sec_series'].append(passed_time)
             joint_recording['command_x_series'].append(self.current_speed.linear.x)
+
+            # further fields
+            joint_recording['support_state'].append(self.walk.get_support_state().phase)
+            imu_msg = self.sim.get_imu_msg()
+            joint_recording['imu_linear_acc_x'].append(imu_msg.linear_acceleration.x)
+            joint_recording['imu_linear_acc_y'].append(imu_msg.linear_acceleration.y)
+            joint_recording['imu_linear_acc_z'].append(imu_msg.linear_acceleration.z)
+            joint_recording['imu_angular_vel_x'].append(imu_msg.angular_velocity.x)
+            joint_recording['imu_angular_vel_y'].append(imu_msg.angular_velocity.y)
+            joint_recording['imu_angular_vel_z'].append(imu_msg.angular_velocity.z)
+
+            pos, rpy = self.sim.get_robot_pose_rpy()
+            joint_recording['robot_pose_x'].append(pos[0])
+            joint_recording['robot_pose_y'].append(pos[1])
+            joint_recording['robot_pose_z'].append(pos[2])
+            joint_recording['robot_pose_r'].append(rpy[0])
+            joint_recording['robot_pose_p'].append(rpy[1])
+            joint_recording['robot_pose_y'].append(rpy[2])
 
         # was stopped before finishing
         raise optuna.exceptions.OptunaError()

@@ -21,6 +21,23 @@ evaluation_recording = {
             'command_sec_series': [n* command_time_secs (since start of speed trial)]
             'command_x_series'  : [n* command_x_velocities]
             'command_x_speed'   : command_speed (x direction)
+
+            'support_state'     : [n* phase(0 to 2)],
+            'imu_linear_acc_x'  : [n* imu linear acceleration],
+            'imu_linear_acc_y'  : [n* up/down direction?],
+            'imu_linear_acc_z'  : [n* ..],
+            'imu_angular_vel_x' : [n* ..],
+            'imu_angular_vel_y' : [n* ..],
+            'imu_angular_vel_z' : [n* ..],
+
+
+            'robot_pose_x': [n* simulator x position],
+            'robot_pose_y': [n* simulator y position],
+            'robot_pose_z': [n* simulator z position],
+            'robot_pose_r': [n* simulator roll],
+            'robot_pose_p': [n* simulator pitch],
+            'robot_pose_y': [n* simulator yaw],
+
         }
     ]
     'speeds':[ j*
@@ -53,5 +70,18 @@ run = {
     'command_x_speed'       : same as in joint recordings
     'actual_speed':         : distance change in command direction over 7.5 seconds
     'speed_factor'          : actual_speed/command_speed
+    'support_state'     : [n* phase(0 to 2)],
+    'imu_linear_acc_x'  : [n* imu linear acceleration],
+    'imu_linear_acc_y'  : [n* up/down direction?],
+    'imu_linear_acc_z'  : [n* ..],
+    'imu_angular_vel_x' : [n* ..],
+    'imu_angular_vel_y' : [n* ..],
+    'imu_angular_vel_z' : [n* ..],
+    'robot_pose_x': [n* simulator x position],
+    'robot_pose_y': [n* simulator y position],
+    'robot_pose_z': [n* simulator z position],
+    'robot_pose_r': [n* simulator roll],
+    'robot_pose_p': [n* simulator pitch],
+    'robot_pose_y': [n* simulator yaw],
 }
 
