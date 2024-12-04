@@ -175,7 +175,7 @@ class EvaluateWalk(AbstractWalkOptimization):
         # results_df.to_pickle(f"./walk_evaluation_{self.robot}.pkl")
 
 
-walk_evaluation = EvaluateWalk("worker", False, "wolfgang")
+walk_evaluation = EvaluateWalk("worker", True, "wolfgang")
 walk_evaluation.evaluate_walk()
 
 walk_evaluation.sim.close()
