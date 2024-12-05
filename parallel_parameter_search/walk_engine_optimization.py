@@ -199,8 +199,6 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         param_dict["node.phase_reset.min_phase"] = 0.9
         param_dict["node.stability_stop.imu.active"] = False
 
-        param_dict["node.pressure_phase_reset_active"] = False
-        param_dict["node.effort_phase_reset_active"] = False
         # make sure that steps are not limited
         param_dict["node.max_step_x"] = 100.0
         param_dict["node.max_step_y"] = 100.0
