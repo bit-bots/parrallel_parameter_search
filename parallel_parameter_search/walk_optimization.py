@@ -44,7 +44,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         self.walk_parameters.append(Parameter(name="node.ik_reset", value=ParameterValue(bool_value=self.robot_name == "wolfgang")))
 
         # create walk as python class to call it later
-        self.walk = PyWalk(self.namespace, self.walk_parameters + moveit_parameters)
+        self.walk = PyWalk(self.namespace, self.walk_parameters, moveit_parameters)
 
     def suggest_walk_params(self, trial):
         raise NotImplementedError

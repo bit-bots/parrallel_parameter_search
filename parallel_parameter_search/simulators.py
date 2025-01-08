@@ -10,16 +10,13 @@ from ament_index_python import get_package_share_directory
 from rclpy.node import Node
 from geometry_msgs.msg import Point, Quaternion
 from nav_msgs.msg import Odometry
-from wolfgang_pybullet_sim.simulation import Simulation
-from wolfgang_pybullet_sim.ros_interface import ROSInterface
+#from wolfgang_pybullet_sim.simulation import Simulation
+#from wolfgang_pybullet_sim.ros_interface import ROSInterface
 
 from bitbots_msgs.msg import JointCommand, FootPressure
 from ros2param.api import load_parameter_file
 
-try:
-    from wolfgang_webots_sim.webots_robot_supervisor_controller import RobotSupervisorController
-except:
-    print("Could not load webots sim. If you want to use it, source the setenvs.sh")
+from bitbots_webots_sim.webots_robot_supervisor_controller import RobotSupervisorController
 
 
 class AbstractSim:
@@ -189,12 +186,12 @@ class WebotsSim(AbstractSim, ABC):
         self.ros_active = ros_active
         if ros_active:
             self.true_odom_publisher = self.node.create_publisher(Odometry, "/true_odom", 1)
-        path = get_package_share_directory("wolfgang_webots_sim")
+        path = get_package_share_directory("bitbots_webots_sim")
 
         if start_webots:
             arguments = ["webots",
                          "--batch",
-                         path + "/worlds/" + world + ".wbt"]
+                         path + "/worlds/" + world + ".wbt",]
             if not gui:
                 arguments.append("--minimize")
                 arguments.append("--no-rendering")

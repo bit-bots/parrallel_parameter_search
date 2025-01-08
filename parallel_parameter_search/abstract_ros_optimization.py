@@ -12,7 +12,6 @@ class AbstractRosOptimization:
         self.wandb = wandb
         # need to init ROS for python and c++ code
         rclpy.init()
-        initRos()
         # initialize node with unique name to avoid clashes when running the same optimization multiple times
         # needs to start with letter
         self.namespace = "anon_" + str(os.getpid()) + "_" + str(random.randint(0, 10000000)) + "_"
