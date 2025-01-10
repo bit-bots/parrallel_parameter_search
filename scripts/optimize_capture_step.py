@@ -15,6 +15,9 @@ from rcl_interfaces.msg import Parameter, ParameterValue
 import math
 from geometry_msgs.msg import Twist
 import time
+
+from bitbots_msgs.srv import SimulatorPush
+
 # define class with objective function
 class CaptureStepOptimization:
     def __init__(self, gui, robot_name):
@@ -59,6 +62,7 @@ class CaptureStepOptimization:
         p_pitch = trial.suggest_float("p_pitch", 0.0, 10.0)
         d_pitch = trial.suggest_float("d_pitch", 0.0, 10.0)
         threshold_pitch = trial.suggest_float("threshold_pitch", 0.0, 10.0)
+        push_force_x = 0.0
         
         ## TODO fix this for the pid contorller ros parameters
         parameters = {}
@@ -75,10 +79,17 @@ class CaptureStepOptimization:
             self.set_cmd_vel(x=0.1, y=0.0, yaw=0.0)
             self.complete_walking_step(number_steps=1)
             # push
-            # ...
+            self.push(push_force_x, 0.0)
+            # step a little more
+            self.complete_walking_step(number_steps=3)
             # check fallen...
-        
-        return 0.0 # value of the objective function
+            if(self.has_robot_fallen()):
+                break
+            else:
+                push_force_x += 10.0
+            # reset to starting position
+            self.reset()
+        return push_force_x # value of the objective function
 
 
     def has_robot_fallen(self):
@@ -135,7 +146,11 @@ class CaptureStepOptimization:
 
     def complete_walking_step(self, number_steps=1, fake=False):
         start_time = self.sim.get_time()
+        fell = False
         for i in range(number_steps):
+            # if the robot fell, we can stop right here
+            if(fell):
+                break
             # does a double step
             while rclpy.ok():
                 current_time = self.sim.get_time()
@@ -151,6 +166,11 @@ class CaptureStepOptimization:
                 phase = self.walk.get_phase()
                 self.walk.spin_ros()
 
+                # if the robot fell, we can stop right here
+                if(self.has_robot_fallen):
+                    fell = True
+                    break
+
                 # phase will advance by the simulation time times walk frequency
                 next_phase = phase + self.sim.get_timestep() * self.walk.get_freq()
                 # do double step to always have torso at same position
@@ -161,6 +181,13 @@ class CaptureStepOptimization:
                     # if walking does not perform step correctly due to impossible IK problems, do a timeout
                     break
 
+    def push(self, x: float, y: float):
+        # push robot in simulation
+        push_request = SimulatorPush.Request()
+        push_request.force.x = x
+        push_request.force.y = y
+        push_request.relative = True
+        self.simulator_push.call_async(push_request)
 
 optimization = CaptureStepOptimization(True, "wolfgang")
 
