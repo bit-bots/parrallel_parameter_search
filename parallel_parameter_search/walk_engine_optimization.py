@@ -24,7 +24,8 @@ class AbstractWalkEngine(AbstractWalkOptimization):
                  repetitions=1,
                  multi_objective=False,
                  only_forward=False,
-                 wandb=False):
+                 wandb=False,
+                 render_video=False):
         super().__init__(robot_name, wandb=wandb)
         if sim_type == 'pybullet':
             urdf_path = get_package_share_directory(f"{robot_name}_description") + "/urdf/robot.urdf"
@@ -39,7 +40,8 @@ class AbstractWalkEngine(AbstractWalkOptimization):
                                  reset_joint_positions=reset_joints,
                                  reset_base_position=reset_pose[0],
                                  reset_base_orientation_wxyz=reset_pose[1],
-                                 gui=gui)
+                                 gui=gui,
+                                 render_video=render_video)
 
         else:
             print(f'sim type {sim_type} not known')
@@ -56,6 +58,7 @@ class AbstractWalkEngine(AbstractWalkOptimization):
             self.directions = [np.array([1, 0, 0])]
         self.repetitions = repetitions
         self.multi_objective = multi_objective
+        self.render_video = render_video
 
     def objective(self, trial):
         print("starting trial")
@@ -144,6 +147,8 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         if self.wandb:
             # log wall time of the trial
             wandb.log({"trial_wall_duration": time.time() - start_time}, step=trial.number)
+        #if self.render_video:
+        #    self.sim.finish_video()
 
         if self.multi_objective:
             return max_speeds  # + max_wrong_speeds
@@ -237,9 +242,9 @@ class AbstractWalkEngine(AbstractWalkOptimization):
 
 
 class WolfgangWalkEngine(AbstractWalkEngine):
-    def __init__(self, gui, sim_type='pybullet', repetitions=1, multi_objective=False, only_forward=False, wandb=False):
+    def __init__(self, gui, sim_type='pybullet', repetitions=1, multi_objective=False, only_forward=False, wandb=False, render_video=False):
         super().__init__(gui, 'wolfgang', sim_type, start_speeds=[0.05, 0.025, 0.25], repetitions=repetitions,
-                         multi_objective=multi_objective, only_forward=only_forward, wandb=wandb)
+                         multi_objective=multi_objective, only_forward=only_forward, wandb=wandb, render_video=render_video)
         self.reset_height_offset = 0.012
 
     def suggest_walk_params(self, trial):
@@ -249,8 +254,8 @@ class WolfgangWalkEngine(AbstractWalkEngine):
     def get_arm_pose(self):
         joint_command_msg = JointCommand()
         joint_command_msg.joint_names = ["LElbow", "RElbow", "LShoulderPitch", "RShoulderPitch"]
-        joint_command_msg.positions = [math.radians(35.86), math.radians(-36.10), math.radians(20.0),
-                                       math.radians(20.0)]
+        joint_command_msg.positions = [math.radians(35.86), math.radians(-36.10), math.radians(-40.0),
+                                       math.radians(-40.0)]
         return joint_command_msg
 
 
@@ -428,3 +433,24 @@ class BezWalkEngine(AbstractWalkEngine):
         joint_command_msg.positions = [math.radians(0),
                                        math.radians(0), math.radians(170), math.radians(170)]
         return joint_command_msg
+
+class SigmabanWalkEngine(AbstractWalkEngine):
+    def __init__(self, gui, sim_type='mujoco', repetitions=1, multi_objective=False, only_forward=False, wandb=False,
+                 render_video=False):
+        super().__init__(gui, 'sigmaban', sim_type, foot_link_names=['left_foot', 'right_foot'],
+                         start_speeds=[0.05, 0.025, 0.25], repetitions=repetitions,
+                         multi_objective=multi_objective, only_forward=only_forward, wandb=wandb, render_video=render_video)
+        self.reset_height_offset = 0.15
+
+    def suggest_walk_params(self, trial):
+        self._suggest_walk_params(trial, trunk_height=(0.14, 0.4), foot_distance=(0.07, 0.2), foot_rise=(0.03, 0.15),
+                                  trunk_x=0.03, z_movement=0.05)
+
+    def get_arm_pose(self):
+        joint_command_msg = JointCommand()
+        joint_command_msg.joint_names = ["left_shoulder_pitch", "left_shoulder_roll", "left_elbow",
+                                         "right_shoulder_pitch", "right_shoulder_roll", "right_elbow"]
+        joint_command_msg.positions = [math.radians(0), math.radians(0), math.radians(0),
+                                       math.radians(0), math.radians(0), math.radians(0)]
+        return joint_command_msg
+

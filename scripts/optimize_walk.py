@@ -11,7 +11,7 @@ from optuna.integration import WeightsAndBiasesCallback
 import numpy as np
 
 from parallel_parameter_search.walk_engine_optimization import OP2WalkEngine, WolfgangWalkEngine, OP3WalkEngine, \
-    NaoWalkEngine, RFCWalkEngine, ChapeWalkEngine, MRLHSLWalkEngine, NugusWalkEngine, SAHRV74WalkEngine, BezWalkEngine
+    NaoWalkEngine, RFCWalkEngine, ChapeWalkEngine, MRLHSLWalkEngine, NugusWalkEngine, SAHRV74WalkEngine, BezWalkEngine, SigmabanWalkEngine
 
 from parallel_parameter_search.walk_stabilization import WolfgangWalkStabilization
 
@@ -38,6 +38,7 @@ parser.add_argument('--suggest', help='Suggest a working solution', action='stor
 parser.add_argument('--wandb', help='Use wandb', action='store_true')
 parser.add_argument('--forward', help='Only optimize forward direction', action='store_true')
 parser.add_argument('--multivariate', help='Activate multivariate feature of TPE', action='store_true')
+parser.add_argument('--render-video', help='Render video of best solution', action='store_true')
 args = parser.parse_args()
 
 seed = np.random.randint(2 ** 32 - 1)
@@ -46,46 +47,27 @@ n_startup_trials = args.startup
 multi_objective = args.sampler in ['MOTPE', 'Random']
 
 if args.type == "engine":
-    if args.robot == "op2":
-        objective = OP2WalkEngine(gui=args.gui, sim_type=args.sim,
-                                  repetitions=args.repetitions, multi_objective=multi_objective,
-                                  only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "wolfgang":
-        objective = WolfgangWalkEngine(gui=args.gui, sim_type=args.sim,
-                                       repetitions=args.repetitions, multi_objective=multi_objective,
-                                       only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "op3":
-        objective = OP3WalkEngine(gui=args.gui, sim_type=args.sim,
-                                  repetitions=args.repetitions, multi_objective=multi_objective,
-                                  only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "nao":
-        objective = NaoWalkEngine(gui=args.gui, sim_type=args.sim,
-                                  repetitions=args.repetitions, multi_objective=multi_objective,
-                                  only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "rfc":
-        objective = RFCWalkEngine(gui=args.gui, sim_type=args.sim,
-                                  repetitions=args.repetitions, multi_objective=multi_objective,
-                                  only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "chape":
-        objective = ChapeWalkEngine(gui=args.gui, sim_type=args.sim,
-                                    repetitions=args.repetitions, multi_objective=multi_objective,
-                                    only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "mrl_hsl":
-        objective = MRLHSLWalkEngine(gui=args.gui, sim_type=args.sim,
-                                     repetitions=args.repetitions, multi_objective=multi_objective,
-                                     only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "nugus":
-        objective = NugusWalkEngine(gui=args.gui, sim_type=args.sim,
-                                    repetitions=args.repetitions, multi_objective=multi_objective,
-                                    only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "sahrv74":
-        objective = SAHRV74WalkEngine(gui=args.gui, sim_type=args.sim,
-                                      repetitions=args.repetitions, multi_objective=multi_objective,
-                                      only_forward=args.forward, wandb=args.wandb)
-    elif args.robot == "bez":
-        objective = BezWalkEngine(gui=args.gui, sim_type=args.sim,
-                                  repetitions=args.repetitions, multi_objective=multi_objective,
-                                  only_forward=args.forward, wandb=args.wandb)
+    kwargs = {"gui" : args.gui, 
+              "sim_type" : args.sim,
+              "repetitions" : args.repetitions,
+              "multi_objective" : multi_objective,
+              "only_forward" : args.forward,
+              "wandb" : args.wandb, 
+              "render_video" : args.render_video}
+    walk_engines = {"op2" : OP2WalkEngine,
+                    "wolfgang" : WolfgangWalkEngine,
+                    "op3" : OP3WalkEngine,
+                    "nao" : NaoWalkEngine,
+                    "rfc" : RFCWalkEngine,
+                    "chape" : ChapeWalkEngine,
+                    "mrl_hsl" : MRLHSLWalkEngine,
+                    "nugus" : NugusWalkEngine,
+                    "sahrv74" : SAHRV74WalkEngine,
+                    "bez" : BezWalkEngine,
+                    "sigmaban" : SigmabanWalkEngine,
+                    }
+    if args.robot in walk_engines:
+        objective = walk_engines[args.robot](**kwargs)
     else:
         print(f"robot type \"{args.robot}\" not known.")
         exit()

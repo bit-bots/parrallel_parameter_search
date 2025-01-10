@@ -307,9 +307,9 @@ class AbstractWalkOptimization(AbstractRosOptimization):
             self.sim.reset_robot_init()
         self.sim.reset_robot_pose((0, 0, 1), (0, 0, 0, 1), reset_joints=True)
         # set arms correctly
-        joint_command_msg = self.get_arm_pose()
-        joint_command_dict = dict_from_joint_command(joint_command_msg)
-        self.sim.set_joint_positions(joint_command_dict)
+        arm_joint_command_msg = self.get_arm_pose()
+        arm_joint_command_dict = dict_from_joint_command(arm_joint_command_msg)
+        self.sim.set_joint_positions(arm_joint_command_dict)
         self.set_cmd_vel(0.1, 0, 0)
         self.complete_walking_step()
         self.set_cmd_vel(0, 0, 0, stop=True)
