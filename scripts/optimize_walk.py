@@ -125,7 +125,7 @@ if args.suggest:
         if len(study.get_trials()) == 0:
             # old params
             print("#############\nUSING GIVEN PARAMETERS\n#############")
-            for i in range(10):
+            for i in range(1):
                 # study.enqueue_trial({
                 #     "engine.double_support_ratio": 0.0264282002140171,
                 #     "engine.first_step_swing_factor": 1.80591386587488,
@@ -184,7 +184,8 @@ if args.wandb:
         "project": f"mujoco_quintic_walk_optim",
         "entity": "bitbots",
         "tags": [args.sampler, args.robot, args.sim],
-        "resume": "never",
+        "resume": "allow",
+        "id": args.name,
         #"group": args.name,  # use group so that we can run multiple studies in parallel
     }
     if args.multivariate:
