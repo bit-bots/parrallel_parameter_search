@@ -9,6 +9,7 @@ from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler, CmaEsSampler, RandomSampler, NSGAIISampler # TODO MOTPESampler,
 from optuna.integration import WeightsAndBiasesCallback
 import numpy as np
+import pandas as pd
 
 from parallel_parameter_search.walk_engine_optimization import OP2WalkEngine, WolfgangWalkEngine, OP3WalkEngine, \
     NaoWalkEngine, RFCWalkEngine, ChapeWalkEngine, MRLHSLWalkEngine, NugusWalkEngine, SAHRV74WalkEngine, BezWalkEngine, SigmabanWalkEngine
@@ -39,6 +40,8 @@ parser.add_argument('--wandb', help='Use wandb', action='store_true')
 parser.add_argument('--forward', help='Only optimize forward direction', action='store_true')
 parser.add_argument('--multivariate', help='Activate multivariate feature of TPE', action='store_true')
 parser.add_argument('--render-video', help='Render video of best solution', action='store_true')
+parser.add_argument('--eval', help='Evaluate n best parameters', default=10, type=int, required=False)
+parser.add_argument('--df-csv', help='Load study dataframe from csv file', default=None, type=str, required=False)
 args = parser.parse_args()
 
 seed = np.random.randint(2 ** 32 - 1)
@@ -104,22 +107,38 @@ else:
     print("sampler not correctly specified. Should be one of {TPE, CMAES, MOTPE, NSGA2, Random}")
     exit(1)
 
-if multi_objective:
-    study = optuna.create_study(study_name=args.name, storage=args.storage,
-                                directions=["maximize"] * num_variables,  # + ["minimize"] * num_variables,
-                                sampler=sampler, load_if_exists=True)
-else:
-    study = optuna.create_study(study_name=args.name, storage=args.storage, direction="maximize",
-                                sampler=sampler, load_if_exists=True)
-
-study.set_user_attr("sampler", args.sampler)
-study.set_user_attr("multivariate", args.multivariate)
-study.set_user_attr("sim", args.sim)
-study.set_user_attr("robot", args.robot)
-study.set_user_attr("type", args.type)
-study.set_user_attr("repetitions", args.repetitions)
-
-
+if not args.df_csv:
+    if multi_objective:
+        study = optuna.create_study(study_name=args.name, storage=args.storage,
+                                    directions=["maximize"] * num_variables,  # + ["minimize"] * num_variables,
+                                    sampler=sampler, load_if_exists=True)
+    else:
+        study = optuna.create_study(study_name=args.name, storage=args.storage, direction="maximize",
+                                    sampler=sampler, load_if_exists=True)
+    
+    study.set_user_attr("sampler", args.sampler)
+    study.set_user_attr("multivariate", args.multivariate)
+    study.set_user_attr("sim", args.sim)
+    study.set_user_attr("robot", args.robot)
+    study.set_user_attr("type", args.type)
+    study.set_user_attr("repetitions", args.repetitions)
+else: 
+    study = optuna.create_study(study_name="local_study")
+    print("#############\nEVALUATING GIVEN PARAMETERS\n#############")
+    trials_dataframe = pd.read_csv(args.df_csv)
+    sorted_trials_dataframe = trials_dataframe.sort_values("value", ascending=False)
+    for i in range(args.eval):
+        current_trial = sorted_trials_dataframe.iloc[i]
+        params = {}
+        for key in current_trial.keys():
+            if key.startswith("params_"):
+                correct_key = key.strip("params_")
+                params[correct_key] = current_trial[key]
+            elif key.startswith("user_attrs_"):
+                correct_key = key.strip("user_attrs_")
+                params[correct_key] = current_trial[key]
+        study.enqueue_trial(params)
+    
 if args.suggest:
     if args.type == "engine":
         if len(study.get_trials()) == 0:
