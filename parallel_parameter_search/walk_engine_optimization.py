@@ -9,8 +9,9 @@ from bitbots_msgs.msg import JointCommand
 from parallel_parameter_search.walk_optimization import AbstractWalkOptimization
 
 from parallel_parameter_search.simulators import PybulletSim, WebotsSim
-from humanoid_simulator_interface.mujoco import MuJoCoSim
+from humanoid_simulator_interface.mujoco_sim import MuJoCoSim
 from humanoid_simulator_interface.utils.reset_constants import get_reset_joints, get_reset_pose
+from humanoid_simulator_interface.utils.dict_from_joint_command import dict_from_joint_command
 
 
 class AbstractWalkEngine(AbstractWalkOptimization):
@@ -69,22 +70,21 @@ class AbstractWalkEngine(AbstractWalkOptimization):
         start_time = time.time()
         # get parameter to evaluate from optuna
         self.suggest_walk_params(trial)
-        print("performing reset")
-        self.reset()
 
         max_speeds = [0] * len(self.directions)
         max_wrong_speeds = [0] * len(self.directions)
+
         # standing as first test, is not in loop as it will only be done once
-        print("evaluating direction")
+        self.reset()
+        self.set_cmd_vel(0, 0, 0, True)
+        self.walk.special_reset("IDLE", 0.0, self.current_speed, True)
         fallen, pose_obj, orientation_obj, gyro_obj, end_poses = self.evaluate_direction(0, 0, 0, 1, standing=True)
         if fallen:
-            print("not standing")
             trial.set_user_attr('termination_reason', "not standing")
             # give lower score as 0 for each direction as we did not even stand
             # or not since this confuses TPE
             #max_speeds = [-1] * len(self.directions)
-        else:
-            # iterate over the directions
+        else: # iterate over the directions if standing works
             d = 0
             for direction in self.directions:
                 # compute an array showing the wrong directions in which the robot should not move
@@ -101,7 +101,9 @@ class AbstractWalkEngine(AbstractWalkOptimization):
                     mean_wrong_speed = 0
                     # do multiple repetitions of the same values since behavior is not always exactly deterministic
                     for i in range(self.repetitions):
-                        self.reset_position()
+                        self.reset()
+                        self.set_cmd_vel(0, 0, 0, True)
+                        self.walk.special_reset("IDLE", 0.0, self.current_speed, True)
                         fall, pose_obj, orientation_obj, gyro_obj, (goal_pose, end_pose) = \
                             self.evaluate_direction(*cmd_vel, self.time_limit)
                         if fall:
@@ -233,6 +235,14 @@ class AbstractWalkEngine(AbstractWalkOptimization):
 
         self.current_params = param_dict
         self.walk.set_parameters(param_dict)
+
+        # we have to update walkready as params changed
+        self.walkready, self.trunk_height, self.trunk_pitch = self.walk.get_walkready()
+        self.walkready = dict_from_joint_command(self.walkready)
+        self.walkready |= dict_from_joint_command(self.get_arm_pose())
+        self.sim.set_reset_joints(self.walkready)
+        self.sim.set_reset_height(self.trunk_height + self.reset_height_offset)
+        self.sim.set_reset_pitch(self.trunk_pitch)
 
         # necessary for correct reset
         self.trunk_height = self.current_params["engine.trunk_height"]
@@ -440,17 +450,16 @@ class SigmabanWalkEngine(AbstractWalkEngine):
         super().__init__(gui, 'sigmaban', sim_type, foot_link_names=['left_foot', 'right_foot'],
                          start_speeds=[0.05, 0.025, 0.25], repetitions=repetitions,
                          multi_objective=multi_objective, only_forward=only_forward, wandb=wandb, render_video=render_video)
-        self.reset_height_offset = 0.15
+        self.reset_height_offset = 0.01
 
     def suggest_walk_params(self, trial):
-        self._suggest_walk_params(trial, trunk_height=(0.14, 0.4), foot_distance=(0.07, 0.2), foot_rise=(0.03, 0.15),
+        self._suggest_walk_params(trial, trunk_height=(0.34, 0.38), foot_distance=(0.07, 0.16), foot_rise=(0.03, 0.15),
                                   trunk_x=0.03, z_movement=0.05)
 
     def get_arm_pose(self):
         joint_command_msg = JointCommand()
-        joint_command_msg.joint_names = ["left_shoulder_pitch", "left_shoulder_roll", "left_elbow",
-                                         "right_shoulder_pitch", "right_shoulder_roll", "right_elbow"]
-        joint_command_msg.positions = [math.radians(0), math.radians(0), math.radians(0),
-                                       math.radians(0), math.radians(0), math.radians(0)]
+        joint_command_msg.joint_names = ["LShoulderPitch", "LShoulderRoll", "LElbow", "RShoulderPitch", "RShoulderRoll", "RElbow"]
+        joint_command_msg.positions = [math.radians(20), math.radians(0), math.radians(-160),
+                                       math.radians(20), math.radians(0), math.radians(-160)]
         return joint_command_msg
 

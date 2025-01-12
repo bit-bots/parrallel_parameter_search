@@ -42,7 +42,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         # load walk params
         self.walk_parameters = get_parameters_from_ros_yaml(
             "walking", f"{get_package_share_directory('bitbots_quintic_walk')}"
-            f"/config/walking_wolfgang_simulator.yaml",
+            f"/config/walking_{robot_name}_simulator.yaml",
             use_wildcard=True)
 
         # activate IK reset only for wolfgang
@@ -98,7 +98,6 @@ class AbstractWalkOptimization(AbstractRosOptimization):
         return [pos[0], pos[1], self.summed_yaw]
 
     def evaluate_direction(self, x, y, yaw, time_limit, standing=False):
-        print("starting evaluation")
         if time_limit == 0:
             raise AssertionError("Time limit must be greater than 0"
                                  )  # todo when is this happening?
@@ -157,7 +156,7 @@ class AbstractWalkOptimization(AbstractRosOptimization):
                                            fpr)
 
             joint_command_dict = dict_from_joint_command(joint_command)
-            self.sim.set_joint_positions(joint_command_dict)
+            self.sim.set_actuator_goal_positions(joint_command_dict)
             self.last_time = current_time
             self.sim.step_sim()
 
@@ -171,37 +170,6 @@ class AbstractWalkOptimization(AbstractRosOptimization):
 
         # was stopped before finishing
         raise optuna.exceptions.OptunaError()
-
-    def complete_walking_step(self, number_steps=1, fake=False):
-        start_time = self.sim.get_time()
-        for i in range(number_steps):
-            # does a double step
-            while rclpy.ok():
-                current_time = self.sim.get_time()
-                imu_msg, js_msg, fpl, fpr = self.get_sensors_for_walking()
-                dt = current_time - self.last_time
-                joint_command = self.walk.step(dt,
-                                               self.current_speed,
-                                               imu_msg,
-                                               js_msg,
-                                               fpl,
-                                               fpr)
-
-                joint_command_dict = dict_from_joint_command(joint_command)
-                self.sim.set_actuator_goal_positions(joint_command_dict)
-                self.last_time = current_time
-                if not fake:
-                    self.sim.step_sim()
-                phase = self.walk.get_phase()
-                # phase will advance by the simulation time times walk frequency
-                next_phase = phase + self.sim.get_timestep() * self.walk.get_freq()
-                # do double step to always have torso at same position
-                if (phase >= 0.5 and next_phase >= 1.0):
-                    # next time the walking step will change
-                    break
-                if self.sim.get_time() - start_time > 5:
-                    # if walking does not perform step correctly due to impossible IK problems, do a timeout
-                    break
 
     def get_sensors_for_walking(self):
         imu_anglular = self.sim.get_imu_ang_vel()
@@ -286,40 +254,8 @@ class AbstractWalkOptimization(AbstractRosOptimization):
 
         return pose_cost, (correct_pose, current_pose)
 
-    def reset_position(self):
-        height = self.trunk_height + self.reset_height_offset
-        pitch = self.trunk_pitch
-        (x, y, z, w) = tf_transformations.quaternion_from_euler(
-            self.reset_rpy_offset[0], self.reset_rpy_offset[1] + pitch,
-            self.reset_rpy_offset[2])
-
-        self.sim.reset_robot_pose((0, 0, height), (x, y, z, w))
-
     def reset(self):
-        #self.walk.special_reset("WALKING", 0.0, Twist(), False)
-
-        # reset simulation
-        # let the robot do a few steps in the air to get correct walkready position
-        self.sim.set_gravity(False)
-        self.sim.set_self_collision(False)
-        if isinstance(self.sim, WebotsSim):
-            # fix for strange webots physic errors
-            self.sim.reset_robot_init()
-        self.sim.reset_robot_pose((0, 0, 1), (0, 0, 0, 1), reset_joints=True)
-        # set arms correctly
-        arm_joint_command_msg = self.get_arm_pose()
-        arm_joint_command_dict = dict_from_joint_command(arm_joint_command_msg)
-        self.sim.set_joint_positions(arm_joint_command_dict)
-        self.set_cmd_vel(0.1, 0, 0)
-        self.complete_walking_step()
-        self.set_cmd_vel(0, 0, 0, stop=True)
-        self.complete_walking_step()
-        self.sim.set_gravity(True)
-        # some robots have issues in their collision model
-        if self.robot_name not in ["nao", "chape"]:
-            self.sim.set_self_collision(True)
-        print("finishing reset")
-        self.reset_position()
+        self.sim.reset()
 
     def set_cmd_vel(self, x: float, y: float, yaw: float, stop=False):
         msg = Twist()
