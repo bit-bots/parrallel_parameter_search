@@ -124,19 +124,24 @@ if not args.df_csv:
     study.set_user_attr("repetitions", args.repetitions)
 else: 
     study = optuna.create_study(study_name="local_study")
-    print("#############\nEVALUATING GIVEN PARAMETERS\n#############")
+    print(f"#############\nEvaluating {args.eval} best runs from {args.df_csv}\n#############")
     trials_dataframe = pd.read_csv(args.df_csv)
+    print(f"{len(trials_dataframe)} trials in study")
     sorted_trials_dataframe = trials_dataframe.sort_values("value", ascending=False)
     for i in range(args.eval):
         current_trial = sorted_trials_dataframe.iloc[i]
+        print(f"{i} had value of: {current_trial['value']}")
         params = {}
         for key in current_trial.keys():
             if key.startswith("params_"):
-                correct_key = key.strip("params_")
+                correct_key = key[len("params_"):]
                 params[correct_key] = current_trial[key]
             elif key.startswith("user_attrs_"):
-                correct_key = key.strip("user_attrs_")
+                correct_key = key[len("user_attrs_"):]
                 params[correct_key] = current_trial[key]
+        if i == 0: # print only the best performing parameters
+            for k,v in params.items():
+                print(f"{k}: {v}")
         study.enqueue_trial(params)
     
 if args.suggest:
