@@ -34,6 +34,7 @@ class CaptureStepOptimization:
         self.node: Node = Node(self.namespace + "optimizer", allow_undeclared_parameters=True)
         self.sim = WebotsSim(self.node, gui, robot_name, world="optimization_" + robot_name, ros_active=False)
 
+        self.simulator_push = self.node.create_client(SimulatorPush, "/simulator_push")
 
         # load moveit config values
         moveit_parameters = load_moveit_parameter(self.robot_name)
@@ -59,11 +60,13 @@ class CaptureStepOptimization:
 
     def objective(self, trial : optuna.Trial):
         print(f"starting trial {trial.number}")
-        p_pitch = trial.suggest_float("p_pitch", 0.0, 10.0)
-        d_pitch = trial.suggest_float("d_pitch", 0.0, 10.0)
+        p_pitch = trial.suggest_float("p_pitch", 0.0, 1.5)
+        d_pitch = trial.suggest_float("d_pitch", 0.0, 1.5)
         threshold_pitch = trial.suggest_float("threshold_pitch", 0.0, 10.0)
-        push_force_x = 0.0
-        
+        push_force_x = 160.0
+        p_pitch = 0.05
+        d_pitch = 0
+        threshold_pitch = 0.05
         ## TODO fix this for the pid contorller ros parameters
         parameters = {}
         parameters["node.step_length.pitch.p"] = p_pitch
@@ -71,25 +74,43 @@ class CaptureStepOptimization:
         parameters["node.step_length.pitch.threshold"] = threshold_pitch
 
         self.walk.set_parameters(parameters)
+        print(f"p_pitch = {p_pitch}, d_pitch = {d_pitch}, threshold = {threshold_pitch}")
+        #start_time = time.time()
+        #print("spinning to accept parameters...")
+        #while (start_time + 3.0) > time.time():
+        #    self.walk.spin_ros()
 
         self.reset()
         fallen = False
+
+        # forward push routine
         while not fallen:
             # step a little
             self.set_cmd_vel(x=0.1, y=0.0, yaw=0.0)
-            self.complete_walking_step(number_steps=1)
+            self.complete_walking_step(number_steps=5)
+            print("single step done")
             # push
             self.push(push_force_x, 0.0)
+            print("push applied")
             # step a little more
-            self.complete_walking_step(number_steps=3)
+            self.complete_walking_step(number_steps=5)
+            print("walked another few steps")
             # check fallen...
             if(self.has_robot_fallen()):
+                print("robot has fallen")
                 break
             else:
-                push_force_x += 10.0
+                push_force_x += 20.0
             # reset to starting position
-            self.reset()
+            #self.reset()
+        
+        # backward push routine
+
         return push_force_x # value of the objective function
+
+    def walk_and_push(self, start_force_x, delta_force_x, start_force_y, delta_force_y, x_vel, y_vel, theta_vel):
+        "returns force at which robot fell"
+        pass
 
 
     def has_robot_fallen(self):
@@ -150,6 +171,7 @@ class CaptureStepOptimization:
         for i in range(number_steps):
             # if the robot fell, we can stop right here
             if(fell):
+                print("robot fell during steps")
                 break
             # does a double step
             while rclpy.ok():
@@ -167,7 +189,7 @@ class CaptureStepOptimization:
                 self.walk.spin_ros()
 
                 # if the robot fell, we can stop right here
-                if(self.has_robot_fallen):
+                if self.has_robot_fallen():
                     fell = True
                     break
 
@@ -187,7 +209,8 @@ class CaptureStepOptimization:
         push_request.force.x = x
         push_request.force.y = y
         push_request.relative = True
-        self.simulator_push.call_async(push_request)
+        self.sim.robot_controller.simulator_push(request=push_request)
+        print(f"pushed with force x: {push_request.force.x}, y: {push_request.force.y},")
 
 optimization = CaptureStepOptimization(True, "wolfgang")
 

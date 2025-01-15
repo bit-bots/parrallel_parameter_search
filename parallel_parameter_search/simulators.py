@@ -254,7 +254,7 @@ class WebotsSim(AbstractSim, ABC):
         return self.robot_controller.time
 
     def get_imu_msg(self):
-        return self.robot_controller.get_imu_msg()
+        return self.robot_controller.get_imu_msg(orientation=True)
 
     def get_joint_state_msg(self):
         return self.robot_controller.get_joint_state_msg()
