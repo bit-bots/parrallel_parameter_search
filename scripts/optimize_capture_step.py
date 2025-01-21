@@ -63,10 +63,13 @@ class CaptureStepOptimization:
         p_pitch = trial.suggest_float("p_pitch", 0.0, 1.5)
         d_pitch = trial.suggest_float("d_pitch", 0.0, 1.5)
         threshold_pitch = trial.suggest_float("threshold_pitch", 0.0, 10.0)
-        push_force_x = 160.0
+        push_force_x_forward = 160.0
+        push_force_x_backwards= -160.0
         p_pitch = 0.05
         d_pitch = 0
         threshold_pitch = 0.05
+        delta_force_x = 20
+        x_vel = 0.1
         ## TODO fix this for the pid contorller ros parameters
         parameters = {}
         parameters["node.step_length.pitch.p"] = p_pitch
@@ -81,16 +84,29 @@ class CaptureStepOptimization:
         #    self.walk.spin_ros()
 
         self.reset()
-        fallen = False
-
+        
         # forward push routine
-        while not fallen:
+        forward_force = self.walk_and_push(push_force_x_forward, delta_force_x, 0, 0, x_vel, 0, 0)       
+        # backward push routine
+        backward_force = self.walk_and_push(push_force_x_backwards, delta_force_x, 0, 0, x_vel, 0, 0)
+        # Ideally, we would return a parameter-front. We simplify and use a sum
+        total_force = forward_force + backward_force
+        return total_force # value of the objective function
+
+    def walk_and_push(self, start_force_x, delta_force_x, start_force_y, delta_force_y, x_vel, y_vel, theta_vel):
+        "returns force at which robot fell"
+        if(start_force_x < 0):
+            delta_force_x *= -1
+        if(start_force_y < 0):
+            delta_force_y *= -1
+
+        while True:
             # step a little
-            self.set_cmd_vel(x=0.1, y=0.0, yaw=0.0)
+            self.set_cmd_vel(x_vel, y_vel, theta_vel)
             self.complete_walking_step(number_steps=5)
-            print("single step done")
+            print("first steps done")
             # push
-            self.push(push_force_x, 0.0)
+            self.push(start_force_x, start_force_y)
             print("push applied")
             # step a little more
             self.complete_walking_step(number_steps=5)
@@ -100,17 +116,16 @@ class CaptureStepOptimization:
                 print("robot has fallen")
                 break
             else:
-                push_force_x += 20.0
-            # reset to starting position
-            #self.reset()
+                start_force_x += delta_force_x
+                start_force_y += delta_force_y
         
-        # backward push routine
+        start_force_x -= delta_force_x
+        start_force_y -= delta_force_y
 
-        return push_force_x # value of the objective function
-
-    def walk_and_push(self, start_force_x, delta_force_x, start_force_y, delta_force_y, x_vel, y_vel, theta_vel):
-        "returns force at which robot fell"
-        pass
+        total_force = ((start_force_x ** 2) + (start_force_y ** 2)) ** 0.5
+        # reset to starting position
+        self.reset()
+        return total_force
 
 
     def has_robot_fallen(self):
